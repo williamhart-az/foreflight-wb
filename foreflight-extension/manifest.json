@@ -1,0 +1,16 @@
+{
+  "manifest_version": 3,
+  "name": "ForeFlight W&B Scraper",
+  "version": "1.0",
+  "description": "Extracts aircraft weight and balance data into a CSV directly from plan.foreflight.com",
+  "permissions": [
+    "activeTab",
+    "scripting"
+  ],
+  "host_permissions": [
+    "https://plan.foreflight.com/*"
+  ],
+  "action": {
+    "default_popup": "popup.html"
+  }
+}

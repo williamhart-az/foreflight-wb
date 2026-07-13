@@ -1,0 +1,17 @@
+# Sensitive ForeFlight data
+*.har
+*.csv
+foreflight-extension.txt
+parse_har.py
+
+# Python files
+__pycache__/
+*.pyc
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE settings
+.vscode/
+.idea/
