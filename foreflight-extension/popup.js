@@ -1,13 +1,74 @@
-document.getElementById('scrape-btn').addEventListener('click', async () => {
-  const btn = document.getElementById('scrape-btn');
+// Load saved settings and status on open
+document.addEventListener('DOMContentLoaded', () => {
+  const emailInput = document.getElementById('recipient-email');
+  const reminderToggle = document.getElementById('reminder-toggle');
+  const lastExportDisplay = document.getElementById('last-export-display');
+
+  // Load from local storage
+  chrome.storage.local.get(['recipientEmail', 'reminderEnabled', 'lastExportDate'], (result) => {
+    if (result.recipientEmail) {
+      emailInput.value = result.recipientEmail;
+    }
+    reminderToggle.checked = result.reminderEnabled !== false; // default to true
+    
+    if (result.lastExportDate) {
+      lastExportDisplay.innerText = formatDate(result.lastExportDate);
+    }
+  });
+
+  // Save email when input loses focus
+  emailInput.addEventListener('blur', () => {
+    chrome.storage.local.set({ recipientEmail: emailInput.value });
+  });
+
+  // Save email on enter key
+  emailInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+      chrome.storage.local.set({ recipientEmail: emailInput.value });
+      emailInput.blur();
+    }
+  });
+
+  // Save toggle state when changed
+  reminderToggle.addEventListener('change', () => {
+    chrome.storage.local.set({ reminderEnabled: reminderToggle.checked });
+  });
+
+  // Test notification button
+  document.getElementById('test-reminder-btn').addEventListener('click', () => {
+    chrome.runtime.sendMessage({ type: 'trigger-test-reminder' });
+  });
+});
+
+// Helper to format date
+function formatDate(timestamp) {
+  if (!timestamp) return 'Never';
+  const date = new Date(timestamp);
+  return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+// Action Buttons
+document.getElementById('download-btn').addEventListener('click', () => {
+  runScraper('download');
+});
+
+document.getElementById('email-btn').addEventListener('click', () => {
+  const recipient = document.getElementById('recipient-email').value.trim();
+  runScraper('email', recipient);
+});
+
+async function runScraper(actionType, recipientEmail = '') {
+  const downloadBtn = document.getElementById('download-btn');
+  const emailBtn = document.getElementById('email-btn');
   const statusContainer = document.getElementById('status-container');
   const statusText = document.getElementById('status-text');
   const progressBar = document.getElementById('progress-bar');
   const errorBox = document.getElementById('error-box');
   const successBox = document.getElementById('success-box');
 
-  // Reset UI
-  btn.disabled = true;
+  // Disable actions during run
+  downloadBtn.disabled = true;
+  emailBtn.disabled = true;
   errorBox.style.display = 'none';
   successBox.style.display = 'none';
   statusContainer.style.display = 'block';
@@ -15,7 +76,6 @@ document.getElementById('scrape-btn').addEventListener('click', async () => {
   progressBar.style.width = '0%';
   progressBar.style.backgroundColor = '#3182ce';
 
-  // Listen for progress messages from the injected script
   const messageListener = (message) => {
     if (message.type === 'progress') {
       statusText.innerText = message.message;
@@ -23,18 +83,32 @@ document.getElementById('scrape-btn').addEventListener('click', async () => {
         progressBar.style.width = `${message.percent}%`;
       }
     } else if (message.type === 'success') {
+      const now = Date.now();
+      chrome.storage.local.set({ lastExportDate: now }, () => {
+        document.getElementById('last-export-display').innerText = formatDate(now);
+      });
+
       statusText.innerText = `Success! Exported ${message.rowCount} W&B profiles.`;
       progressBar.style.width = '100%';
-      progressBar.style.backgroundColor = '#48bb78'; // Green success bar
-      successBox.innerText = `Exported ${message.rowCount} weight & balance profile(s) to aircraft_wb_rows.csv`;
+      progressBar.style.backgroundColor = '#48bb78'; // green
+      
+      if (actionType === 'email') {
+        successBox.innerText = `Exported ${message.rowCount} profiles. Data copied to clipboard & opened mail client.`;
+      } else {
+        successBox.innerText = `Exported ${message.rowCount} profiles and downloaded CSV file.`;
+      }
       successBox.style.display = 'block';
-      btn.disabled = false;
+      
+      downloadBtn.disabled = false;
+      emailBtn.disabled = false;
       chrome.runtime.onMessage.removeListener(messageListener);
     } else if (message.type === 'error') {
       statusContainer.style.display = 'none';
       errorBox.innerText = `Error: ${message.message}`;
       errorBox.style.display = 'block';
-      btn.disabled = false;
+      
+      downloadBtn.disabled = false;
+      emailBtn.disabled = false;
       chrome.runtime.onMessage.removeListener(messageListener);
     }
   };
@@ -42,11 +116,8 @@ document.getElementById('scrape-btn').addEventListener('click', async () => {
   chrome.runtime.onMessage.addListener(messageListener);
 
   try {
-    // Get active tab
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    if (!tab) {
-      throw new Error('No active browser tab found.');
-    }
+    if (!tab) throw new Error('No active browser tab found.');
 
     const url = new URL(tab.url);
     if (url.hostname !== 'plan.foreflight.com') {
@@ -55,10 +126,11 @@ document.getElementById('scrape-btn').addEventListener('click', async () => {
 
     statusText.innerText = 'Injecting scraping engine...';
 
-    // Inject the scraping function into the tab
+    // Inject scraper with arguments
     await chrome.scripting.executeScript({
       target: { tabId: tab.id },
-      func: scrapeForeFlightTab
+      func: scrapeForeFlightTab,
+      args: [actionType, recipientEmail]
     });
 
   } catch (err) {
@@ -66,17 +138,18 @@ document.getElementById('scrape-btn').addEventListener('click', async () => {
     statusContainer.style.display = 'none';
     errorBox.innerText = err.message;
     errorBox.style.display = 'block';
-    btn.disabled = false;
+    downloadBtn.disabled = false;
+    emailBtn.disabled = false;
   }
-});
+}
 
-// This function runs inside the plan.foreflight.com page context
-async function scrapeForeFlightTab() {
+// Injected scraping logic running in plan.foreflight.com context
+async function scrapeForeFlightTab(actionType, recipientEmail) {
   try {
     // 1. Extract XSRF token
     const xsrfCookie = document.cookie.split('; ').find(row => row.startsWith('_xsrf='));
     if (!xsrfCookie) {
-      throw new Error('XSRF token cookie (_xsrf) not found. Are you logged into ForeFlight on this page?');
+      throw new Error('XSRF token cookie (_xsrf) not found. Are you logged in?');
     }
     const xsrfToken = decodeURIComponent(xsrfCookie.split('=')[1]);
     
@@ -119,7 +192,7 @@ async function scrapeForeFlightTab() {
       percent: 10 
     });
 
-    // Helper functions
+    // Helpers
     const findKey = (obj, key) => {
       if (obj && typeof obj === 'object') {
         if (key in obj) return obj[key];
@@ -247,16 +320,61 @@ async function scrapeForeFlightTab() {
       csvContent += `"${row.tail_number}","${row.registration}",${row.basic_empty_weight},${row.basic_empty_arm_longitudinal}\n`;
     }
 
-    // 6. Download file
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.setAttribute('href', url);
-    link.setAttribute('download', 'aircraft_wb_rows.csv');
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    // 6. Execute action
+    if (actionType === 'email') {
+      chrome.runtime.sendMessage({ type: 'progress', message: 'Copying data & opening email...', percent: 98 });
+      
+      // Copy to Clipboard
+      try {
+        await navigator.clipboard.writeText(csvContent);
+      } catch (err) {
+        // Fallback for clipboard writing
+        const textarea = document.createElement('textarea');
+        textarea.value = csvContent;
+        textarea.style.position = 'fixed';
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+      }
+
+      // Generate mailto link
+      const emailSubject = encodeURIComponent('Monthly ForeFlight Weight & Balance Data');
+      
+      // Write email body with instructions and inline data (which might get truncated if extremely long, hence clipboard backup)
+      const emailBody = encodeURIComponent(
+        `Hi,\n\n` +
+        `Here is the monthly ForeFlight Weight & Balance data CSV.\n\n` +
+        `NOTE: The complete CSV data has also been automatically copied to your clipboard. If the text below appears truncated, you can simply clear the block below and paste (Ctrl+V) directly into this email.\n\n` +
+        `=== CSV DATA START ===\n` +
+        csvContent +
+        `=== CSV DATA END ===\n\n` +
+        `Best regards,\n` +
+        `ForeFlight Exporter extension`
+      );
+
+      const mailtoUrl = `mailto:${recipientEmail}?subject=${emailSubject}&body=${emailBody}`;
+      
+      // Trigger mail client launch safely without redirecting page
+      const mailLink = document.createElement('a');
+      mailLink.href = mailtoUrl;
+      mailLink.target = '_self';
+      document.body.appendChild(mailLink);
+      mailLink.click();
+      document.body.removeChild(mailLink);
+
+    } else {
+      // Standard local CSV download
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      link.setAttribute('download', 'aircraft_wb_rows.csv');
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
 
     chrome.runtime.sendMessage({ type: 'success', rowCount: rows.length });
 

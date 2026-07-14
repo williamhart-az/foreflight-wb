@@ -14,9 +14,9 @@
     .header {
       display: flex;
       align-items: center;
-      margin-bottom: 16px;
+      margin-bottom: 12px;
       border-bottom: 1px solid #2d3748;
-      padding-bottom: 12px;
+      padding-bottom: 8px;
     }
     .logo {
       width: 24px;
@@ -29,27 +29,117 @@
       font-weight: 700;
       color: #ffffff;
     }
-    .description {
+    .section-title {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #718096;
+      margin: 12px 0 8px 0;
+      font-weight: 700;
+    }
+    .form-group {
+      margin-bottom: 10px;
+    }
+    label {
+      display: block;
+      font-size: 12px;
+      color: #cbd5e0;
+      margin-bottom: 4px;
+    }
+    input[type="email"] {
+      width: 100%;
+      background-color: #2d3748;
+      border: 1px solid #4a5568;
+      color: #ffffff;
+      padding: 8px;
       font-size: 13px;
-      color: #a0aec0;
-      margin-bottom: 16px;
-      line-height: 1.4;
+      border-radius: 4px;
+      box-sizing: border-box;
+      transition: border-color 0.2s;
+    }
+    input[type="email"]:focus {
+      outline: none;
+      border-color: #3182ce;
+    }
+    .toggle-container {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+    .toggle-label {
+      font-size: 13px;
+      color: #cbd5e0;
+    }
+    /* Simple Toggle Switch CSS */
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 36px;
+      height: 20px;
+    }
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #4a5568;
+      transition: .3s;
+      border-radius: 20px;
+    }
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 14px;
+      width: 14px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: .3s;
+      border-radius: 50%;
+    }
+    input:checked + .slider {
+      background-color: #3182ce;
+    }
+    input:checked + .slider:before {
+      transform: translateX(16px);
+    }
+    
+    .actions-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 14px;
     }
     .btn {
-      width: 100%;
       background-color: #3182ce;
       color: #ffffff;
       border: none;
-      padding: 10px 16px;
-      font-size: 14px;
+      padding: 10px;
+      font-size: 13px;
       font-weight: 600;
       border-radius: 6px;
       cursor: pointer;
       display: flex;
-      justify-content: center;
+      flex-direction: column;
       align-items: center;
-      transition: background-color 0.2s ease, transform 0.1s ease;
+      justify-content: center;
+      transition: background-color 0.2s, transform 0.1s;
       box-sizing: border-box;
+      min-height: 52px;
+    }
+    .btn svg {
+      width: 16px;
+      height: 16px;
+      margin-bottom: 4px;
+      fill: currentColor;
     }
     .btn:hover {
       background-color: #2b6cb0;
@@ -63,18 +153,31 @@
       cursor: not-allowed;
       transform: none;
     }
+    .btn-secondary {
+      background-color: #2d3748;
+      border: 1px solid #4a5568;
+      color: #cbd5e0;
+    }
+    .btn-secondary:hover {
+      background-color: #3a475c;
+      color: #ffffff;
+    }
+    
     .status-container {
-      margin-top: 16px;
+      margin-top: 14px;
       display: none;
+      padding: 8px;
+      background-color: #2d3748;
+      border-radius: 6px;
     }
     .status-text {
-      font-size: 13px;
+      font-size: 12px;
       color: #cbd5e0;
-      margin-bottom: 8px;
+      margin-bottom: 6px;
     }
     .progress-bar-bg {
       width: 100%;
-      height: 6px;
+      height: 5px;
       background-color: #4a5568;
       border-radius: 3px;
       overflow: hidden;
@@ -83,12 +186,31 @@
       width: 0%;
       height: 100%;
       background-color: #3182ce;
-      transition: width 0.3s ease, background-color 0.3s ease;
+      transition: width 0.3s;
     }
+    
+    .info-bar {
+      font-size: 11px;
+      color: #a0aec0;
+      display: flex;
+      justify-content: space-between;
+      margin-top: 12px;
+      padding-top: 8px;
+      border-top: 1px solid #2d3748;
+    }
+    .test-link {
+      color: #3182ce;
+      text-decoration: none;
+      cursor: pointer;
+    }
+    .test-link:hover {
+      text-decoration: underline;
+    }
+
     .error-msg {
       margin-top: 12px;
       color: #fc8181;
-      font-size: 13px;
+      font-size: 12px;
       line-height: 1.4;
       display: none;
       padding: 8px;
@@ -99,10 +221,13 @@
     .success-msg {
       margin-top: 12px;
       color: #68d391;
-      font-size: 13px;
-      font-weight: 600;
+      font-size: 12px;
+      line-height: 1.4;
       display: none;
-      text-align: center;
+      padding: 8px;
+      background-color: rgba(72, 187, 120, 0.15);
+      border: 1px solid rgba(72, 187, 120, 0.3);
+      border-radius: 4px;
     }
   </style>
 </head>
@@ -111,14 +236,36 @@
     <svg class="logo" viewBox="0 0 24 24">
       <path d="M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L14 19v-5.5l7 2.5z"/>
     </svg>
-    <div class="title">ForeFlight W&B Scraper</div>
+    <div class="title">ForeFlight Exporter</div>
   </div>
 
-  <div class="description">
-    Navigate to your authenticated <strong>plan.foreflight.com</strong> session and click the button below to extract your weight & balance profiles.
+  <div class="section-title">Reminder Configuration</div>
+  
+  <div class="form-group">
+    <label for="recipient-email">Recipient Email Address</label>
+    <input type="email" id="recipient-email" placeholder="colleague@example.com" spellcheck="false">
   </div>
 
-  <button id="scrape-btn" class="btn">Export W&B to CSV</button>
+  <div class="toggle-container">
+    <div class="toggle-label">Enable Monthly Notifications</div>
+    <label class="switch">
+      <input type="checkbox" id="reminder-toggle" checked>
+      <span class="slider"></span>
+    </label>
+  </div>
+
+  <div class="section-title">Data Actions</div>
+  
+  <div class="actions-grid">
+    <button id="download-btn" class="btn btn-secondary" title="Save CSV locally">
+      <svg viewBox="0 0 24 24"><path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM17 13l-5 5-5-5h3V9h4v4h3z"/></svg>
+      Download CSV
+    </button>
+    <button id="email-btn" class="btn" title="Format data and open mail client">
+      <svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg>
+      Email Data
+    </button>
+  </div>
 
   <div id="status-container" class="status-container">
     <div id="status-text" class="status-text">Initializing...</div>
@@ -128,7 +275,12 @@
   </div>
 
   <div id="error-box" class="error-msg"></div>
-  <div id="success-box" class="success-msg">Export completed successfully!</div>
+  <div id="success-box" class="success-msg"></div>
+
+  <div class="info-bar">
+    <div>Last Export: <span id="last-export-display">Never</span></div>
+    <div><span id="test-reminder-btn" class="test-link">Test Alarm</span></div>
+  </div>
 
   <script src="popup.js"></script>
 </body>
